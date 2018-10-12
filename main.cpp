@@ -1,35 +1,36 @@
-/* Найти лексикографически минимальную строку, 
- * построенную по префикс-функции, в алфавите a-z.*/
- 
+/* РќР°Р№С‚Рё Р»РµРєСЃРёРєРѕРіСЂР°С„РёС‡РµСЃРєРё РјРёРЅРёРјР°Р»СЊРЅСѓСЋ СЃС‚СЂРѕРєСѓ, 
+ * РїРѕСЃС‚СЂРѕРµРЅРЅСѓСЋ РїРѕ РїСЂРµС„РёРєСЃ-С„СѓРЅРєС†РёРё, РІ Р°Р»С„Р°РІРёС‚Рµ a-z.*/
+
 #include <iostream>
-#include <vector>
-#include <cstring>
 #include <queue>
+#include <vector>
+
 using namespace std;
+
 const int alphabet_size = 26;
+const char start_symbol = 'a';
 
-
-// Построение лексикографически минимальной строки по префикс-функции.
+// РџРѕСЃС‚СЂРѕРµРЅРёРµ Р»РµРєСЃРёРєРѕРіСЂР°С„РёС‡РµСЃРєРё РјРёРЅРёРјР°Р»СЊРЅРѕР№ СЃС‚СЂРѕРєРё РїРѕ РїСЂРµС„РёРєСЃ-С„СѓРЅРєС†РёРё.
 string prefix_to_string(const vector <int>& prefix) {
-	string result = "a";
-	for (int i = 1; i < static_cast<int>(prefix.size()); i++) {
+	string result = "";
+	result.push_back(start_symbol);
+	for (int i = 1; i < static_cast <int>(prefix.size()); i++) {
 		if (prefix[i])
 			result += result[prefix[i] - 1];
 		else {
-			// хочется, чтобы ни один из потенциально возможных суффиксов нельзя было продолжить.
-			// переберём их и пометим символы после них как "forbidden" - запрещённые. 
-			// В конце выберем первый не запрещённый символ.
-			int forbidden[alphabet_size];
-			memset(forbidden, 0, sizeof(forbidden));
+			// С…РѕС‡РµС‚СЃСЏ, С‡С‚РѕР±С‹ РЅРё РѕРґРёРЅ РёР· РїРѕС‚РµРЅС†РёР°Р»СЊРЅРѕ РІРѕР·РјРѕР¶РЅС‹С… СЃСѓС„С„РёРєСЃРѕРІ РЅРµР»СЊР·СЏ Р±С‹Р»Рѕ РїСЂРѕРґРѕР»Р¶РёС‚СЊ.
+			// РїРµСЂРµР±РµСЂС‘Рј РёС… Рё РїРѕРјРµС‚РёРј СЃРёРјРІРѕР»С‹ РїРѕСЃР»Рµ РЅРёС… РєР°Рє "forbidden" - Р·Р°РїСЂРµС‰С‘РЅРЅС‹Рµ. 
+			// Р’ РєРѕРЅС†Рµ РІС‹Р±РµСЂРµРј РїРµСЂРІС‹Р№ РЅРµ Р·Р°РїСЂРµС‰С‘РЅРЅС‹Р№ СЃРёРјРІРѕР».
+			vector <bool> forbidden(alphabet_size, 0);
 			int current = prefix[i - 1];
 			while (current > 0) {
-				forbidden[result[current] - 'a'] = 1;
+				forbidden[result[current] - start_symbol] = true;
 				current = prefix[current - 1];
 			}
-			forbidden[result[current] - 'a'] = 1;
+			forbidden[result[current] - start_symbol] = true;
 			for (int i = 0; i < alphabet_size; i++) {
 				if (!forbidden[i]) {
-					result += 'a' + i;
+					result += start_symbol + i;
 					break;
 				}
 			}
@@ -39,18 +40,11 @@ string prefix_to_string(const vector <int>& prefix) {
 }
 
 
-// Преобразование z-функции некоторой строки в её префикс-функцию.
+// РџСЂРµРѕР±СЂР°Р·РѕРІР°РЅРёРµ z-С„СѓРЅРєС†РёРё РЅРµРєРѕС‚РѕСЂРѕР№ СЃС‚СЂРѕРєРё РІ РµС‘ РїСЂРµС„РёРєСЃ-С„СѓРЅРєС†РёСЋ.
 void z_to_prefix(vector <int>& prefix, const vector <int>& z) {
-	int size = static_cast<int>(z.size());
+	int size = static_cast <int>(z.size());
 	prefix.clear();
 	prefix.resize(size, 0);
-	prefix[0] = 0;
-	/* z-функция задаёт некоторые "отрезки" - подстроки, совпадающие с префиксами.
-	   Какие-то из них содержат i-й символ. 
-	   Префикс-функция в i-й позиции равна наибольшей из длин префиксов таких подстрок, 
-	   оканчивающихся на этом символе. Если идти по строке с начала до конца и 
-	   записывать отрезки, то отрезок с наиболее длинным подходящим префиксом окажется записан
-	   раньше всех, то есть будет первым в очереди. Уже оставшиеся позади отрезки нужно удалять.*/
 	queue <pair <int, int> > segments;
 	for (int i = 1; i < size; i++) {
 		while (!segments.empty() && segments.front().first + segments.front().second <= i)
@@ -65,20 +59,20 @@ void z_to_prefix(vector <int>& prefix, const vector <int>& z) {
 }
 
 
-// Вычисляет z-функцию z строки text.
+// Р’С‹С‡РёСЃР»СЏРµС‚ z-С„СѓРЅРєС†РёСЋ z СЃС‚СЂРѕРєРё text.
 void z_function(const string& text, vector <int>& z) {
-	int size = static_cast<int>(text.length());
+	int size = static_cast <int>(text.length());
 	z.resize(size, 0);
 	z[0] = size;
-	// Границы самого правой найденной подстроки, совпадающей с некоторым префиксом.
+	// Р“СЂР°РЅРёС†С‹ СЃР°РјРѕРіРѕ РїСЂР°РІРѕР№ РЅР°Р№РґРµРЅРЅРѕР№ РїРѕРґСЃС‚СЂРѕРєРё, СЃРѕРІРїР°РґР°СЋС‰РµР№ СЃ РЅРµРєРѕС‚РѕСЂС‹Рј РїСЂРµС„РёРєСЃРѕРј.
 	int left_border = 0, right_border = 0;
 	for (int i = 1; i < size; i++) {
-		// Используем уже посчитанные ранее значения, если это возможно.
+		// РСЃРїРѕР»СЊР·СѓРµРј СѓР¶Рµ РїРѕСЃС‡РёС‚Р°РЅРЅС‹Рµ СЂР°РЅРµРµ Р·РЅР°С‡РµРЅРёСЏ, РµСЃР»Рё СЌС‚Рѕ РІРѕР·РјРѕР¶РЅРѕ.
 		if (right_border >= i)
 			z[i] = min(z[i - left_border], right_border - i + 1);
 		while (i + z[i] < size && text[i + z[i]] == text[z[i]])
 			z[i]++;
-		// обновление границ
+		// РѕР±РЅРѕРІР»РµРЅРёРµ РіСЂР°РЅРёС†
 		if (i + z[i] - 1 > right_border) {
 			left_border = i;
 			right_border = i + z[i] - 1;
@@ -87,7 +81,7 @@ void z_function(const string& text, vector <int>& z) {
 }
 
 
-// Построение лексикографически минимальной строки по z-функции z.
+// РџРѕСЃС‚СЂРѕРµРЅРёРµ Р»РµРєСЃРёРєРѕРіСЂР°С„РёС‡РµСЃРєРё РјРёРЅРёРјР°Р»СЊРЅРѕР№ СЃС‚СЂРѕРєРё РїРѕ z-С„СѓРЅРєС†РёРё z.
 string z_to_string(const vector <int>& z) {
 	vector <int> prefix;
 	z_to_prefix(prefix, z);
@@ -95,14 +89,14 @@ string z_to_string(const vector <int>& z) {
 }
 
 
-// Преобразование префикс-функции некоторой строки в её z-функцию.
+// РџСЂРµРѕР±СЂР°Р·РѕРІР°РЅРёРµ РїСЂРµС„РёРєСЃ-С„СѓРЅРєС†РёРё РЅРµРєРѕС‚РѕСЂРѕР№ СЃС‚СЂРѕРєРё РІ РµС‘ z-С„СѓРЅРєС†РёСЋ.
 void prefix_to_z(const vector <int>& prefix, vector <int>& z) {
-	string temporary = prefix_to_string(prefix);
-	z_function(temporary, z);
+	string auxiliary_string = prefix_to_string(prefix);
+	z_function(auxiliary_string, z);
 }
 
 
-// Вычисляет префикс-функцию prefix строки text.
+// Р’С‹С‡РёСЃР»СЏРµС‚ РїСЂРµС„РёРєСЃ-С„СѓРЅРєС†РёСЋ prefix СЃС‚СЂРѕРєРё text.
 void prefix_function(const string& text, vector <int>& prefix) {
 	vector <int> z;
 	z_function(text, z);
@@ -110,7 +104,7 @@ void prefix_function(const string& text, vector <int>& prefix) {
 }
 
 
-// Функция для решения.
+// Р¤СѓРЅРєС†РёСЏ РґР»СЏ СЂРµС€РµРЅРёСЏ.
 void solve() {
 	vector <int> prefix;
 	int number;
