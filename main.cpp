@@ -1,64 +1,78 @@
-/* РќР°Р№РґРёС‚Рµ РІСЃРµ РІС…РѕР¶РґРµРЅРёСЏ С€Р°Р±Р»РѕРЅР° РІ СЃС‚СЂРѕРєСѓ. Р”Р»РёРЅР° С€Р°Р±Р»РѕРЅР° - p, РґР»РёРЅР° СЃС‚СЂРѕРєРё - n. 
- * Р’СЂРµРјСЏ O(n + p), РґРѕРї. РїР°РјСЏС‚СЊ - O(p).
+/* Найдите все вхождения шаблона в строку. Длина шаблона - p, длина строки - n. 
+ * Время O(n + p), доп. память - O(p).
  * p <= 30000, n <= 300000.
- * Р¤РѕСЂРјР°С‚ РІРІРѕРґР°:
-   РЁР°Р±Р»РѕРЅ, СЃРёРјРІРѕР» РїРµСЂРµРІРѕРґР° СЃС‚СЂРѕРєРё, СЃС‚СЂРѕРєР°.
- * Р¤РѕСЂРјР°С‚ РІС‹РІРѕРґР°:
-   РџРѕР·РёС†РёРё РІС…РѕР¶РґРµРЅРёСЏ С€Р°Р±Р»РѕРЅР° РІ СЃС‚СЂРѕРєРµ.*/
+ * Формат ввода:
+   Шаблон, символ перевода строки, строка.
+ * Формат вывода:
+   Позиции вхождения шаблона в строке.*/
  
+#include <fstream>
 #include <iostream>
-#include <vector>
 #include <string>
+#include <vector>
 using namespace std;
 
 
-// РЎС‡РёС‚Р°РµС‚ РїСЂРµС„РёРєСЃ-С„СѓРЅРєС†РёСЋ prefix СЃС‚СЂРѕРєРё sample.
+// Считает префикс-функцию prefix строки sample.
 void prefix_function(const string& sample, vector <int>& prefix) {
         int sample_length = static_cast<int>(sample.length());
         prefix.resize(sample_length, 0);
         for (int i = 1; i < sample_length; i++) {
                 int current_position = i - 1;
-                // РџРµСЂРµР±РѕСЂ РІ РїРѕСЂСЏРґРєРµ СѓР±С‹РІР°РЅРёСЏ РґР»РёРЅС‹ РІСЃРµС… СЃСѓС„С„РёРєСЃРѕРІ, РєРѕС‚РѕСЂС‹Рµ РїРѕС‚РµРЅС†РёР°Р»СЊРЅРѕ РјРѕР¶РЅРѕ РїСЂРѕРґРѕР»Р¶РёС‚СЊ.
-                while (current_position >= 0 && sample[i] != sample[prefix[current_position]])
+                // Перебор в порядке убывания длины всех суффиксов, которые потенциально можно продолжить.
+                while (current_position >= 0 && sample[i] != sample[prefix[current_position]]) {
                         current_position = prefix[current_position] - 1;
-                prefix[i] = (current_position >= 0 && 
-                	     sample[i] == sample[prefix[current_position]] ? prefix[current_position] + 1 : 0);
+				}
+                if (current_position >= 0 && sample[i] == sample[prefix[current_position]]) {
+					prefix[i] = prefix[current_position] + 1;
+				}
+				else {
+					prefix[i] = 0;
+				}
         }
 }
 
 
-// Р РµР°Р»РёР·СѓРµС‚ Р°Р»РіРѕСЂРёС‚Рј РљРЅСѓС‚Р°-РњРѕСЂСЂРёСЃР°-РџСЂР°С‚С‚Р°. РџСЂРёРЅРёРјР°РµС‚ РЅР° РІС…РѕРґ С€Р°Р±Р»РѕРЅ, 
-// С‚РµРєСЃС‚ СЃС‡РёС‚С‹РІР°РµС‚СЃСЏ Рё РѕР±СЂР°Р±Р°С‚С‹РІР°РµС‚СЃСЏ РІ РїСЂРѕС†РµСЃСЃРµ СЂР°Р±РѕС‚С‹.
-void KMP(const string& pattern) {
-        vector <int> prefix; // С…СЂР°РЅРёС‚ РїСЂРµС„РёРєСЃ-С„СѓРЅРєС†РёСЋ С€Р°Р±Р»РѕРЅР°
+// Реализует алгоритм Кнута-Морриса-Пратта. Принимает на вход потоки ввода и вывода, 
+// шаблон и текст считываются и обрабатываются в процессе работы.
+void find_pattern_in_stream(ifstream& fin, ofstream& fout) {
+		string pattern;
+		fin >> pattern;
+        vector <int> prefix; // хранит префикс-функцию шаблона
         prefix_function(pattern, prefix);
-        char last = '#';  // РїРѕСЃР»РµРґРЅРёР№ РІРІРµРґС‘РЅРЅС‹Р№ СЃРёРјРІРѕР»
-        // РџСЂРµС„РёРєСЃ-С„СѓРЅРєС†РёСЏ РїСЂРµРґРїРѕСЃР»РµРґРЅРµРіРѕ Рё РїРѕСЃР»РµРґРЅРµРіРѕ СЌР»РµРјРµРЅС‚РѕРІ Рё РёС… СЃС‡С‘С‚С‡РёРє.
+        char last = '#';  // последний введённый символ
+        // Префикс-функция предпоследнего и последнего элементов и их счётчик.
         int previous_prefix = 0, last_prefix = 0, counter = 0;
-        while (cin >> last) {
-        	// РџРѕРґСЃС‡РёС‚С‹РІР°РµРј РїСЂРµС„РёРєСЃ-С„СѓРЅРєС†РёСЋ РґР»СЏ С‚РµРєСѓС‰РµРіРѕ СЂР°СЃСЃРјР°С‚СЂРёРІР°РµРјРѕРіРѕ СЌР»РµРјРµРЅС‚Р°.
+        while (fin >> last) {
+        	// Подсчитываем префикс-функцию для текущего рассматриваемого элемента.
                 if (last == pattern[previous_prefix])
                         last_prefix = previous_prefix + 1;
                 else {
                         int current = previous_prefix - 1;
                         while (current >= 0 && last != pattern[prefix[current]])
                                 current = prefix[current] - 1;
-                        last_prefix = (current >= 0 && 
-                        	       last == pattern[prefix[current]] ? prefix[current] + 1 : 0);
+                        if (current >= 0 && last == pattern[prefix[current]]) {
+							last_prefix = prefix[current] + 1; 
+						}
+						else {
+							last_prefix = 0;
+						}
                 }
                 if (last_prefix == static_cast<int>(pattern.length()))
-                                cout << counter - static_cast<int>(pattern.length()) + 1 << " ";
+                                fout << counter - static_cast<int>(pattern.length()) + 1 << " ";
                 counter++;
                 previous_prefix = last_prefix;
         }
 }
 
 
-// Р¤СѓРЅРєС†РёСЏ РґР»СЏ СЂРµС€РµРЅРёСЏ.
+// Функция для решения.
 void solve() {
-        string pattern;
-        cin >> pattern;
-        KMP(pattern);
+		ifstream fin("input.txt");
+		ofstream fout("output.txt");
+        find_pattern_in_stream(fin, fout);
+		fin.close();
+		fout.close();
 }
 
                                                                                                                           
@@ -66,8 +80,6 @@ int main() {
         ios_base::sync_with_stdio(0);
         cin.tie(0);                                                                                         
         cout.tie(0); 
-        freopen("input.txt", "r", stdin);
-        freopen("output.txt", "w", stdout);        
         solve();
         return 0;
 }
