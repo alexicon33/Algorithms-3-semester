@@ -1,41 +1,48 @@
 #include <algorithm>
 #include <iostream>
-#include <memory>
-#include <queue>
 #include <vector>
 
 using namespace std;
 
-// Символы-разделители, не встречающиеся в строках.
+/* Символы-разделители, не встречающиеся в строках.
+ * Первый отделяет строку s от строки t, а второй добавляется в конец 
+ * и нужен для построения суффиксного массива. Первый же нужен вот зачем:
+ * s_i...s_{n-1}$t_0...t_{m-1}#
+ * t_j...t_{m-1}#
+ * Если его не добавлять, то при возникновении описанной выше ситуации lcp может "залезть"
+ * на строку t, и будут посчитаны какие-то лишние подстроки, на самом деле не явлляющиеся общими.
+ * Если же он есть, длина lcp гарантированно меньше длины суффикса s + 1, и всё будет учитываться верно. */
 const char special_symbol_1 = '$';
 const char special_symbol_2 = '#';
-const long long alphabet_size = 97;
+const int alphabet_size = 97;
 
-/* Модифицирует массив, получившийся после подсчёта, так, чтобы cnt[i] 
+/* Модифицирует массив, получившийся после подсчёта, так, чтобы count[i] 
  * хранил позицию, в которую нужно начинать ставить элементы с ключом i.
- * Изначально cnt[i] - количество элементов с ключом i. */
-void count_positions(vector <int>& cnt) {
-	int last = cnt[0];
-	cnt[0] = 0;
-	for (int i = 1; i < static_cast <int>(cnt.size()); i++) {
-		int temp = cnt[i];
-		cnt[i] = last;
+ * Изначально count[i] - количество элементов с ключом i. */
+void count_positions(vector <int>& count) {
+	if (count.empty())
+		return;
+	int last = count[0];
+	count[0] = 0;
+	for (int i = 1; i < static_cast <int>(count.size()); i++) {
+		int temp = count[i];
+		count[i] = last;
 		last += temp;
 	}
 }
 
 // Построение суффиксного массива suf (изначально заполнен нулями) по строке s.
-void build_suffix_array(string& s, vector <int>& suf) {
-	int size = static_cast <int>(s.length());
+void build_suffix_array(const string& s, vector <int>& suf) {
+	const int size = static_cast <int>(s.length());
 	// вспомогательный массив для сортировки подсчётом
-	vector <int> cnt(alphabet_size, 0);
+	vector <int> count(alphabet_size, 0);
 	// классы эквивалентности суффиксов по первым символам
 	vector <int> classes(size, 0);
 	for (int i = 0; i < size; i++)
-		cnt[s[i] - special_symbol_2]++;
-	count_positions(cnt);
+		count[s[i] - special_symbol_2]++;
+	count_positions(count);
 	for (int i = 0; i < size; i++)
-		suf[cnt[s[i] - special_symbol_2]++] = i;
+		suf[count[s[i] - special_symbol_2]++] = i;
 	char current_char = special_symbol_2;
 	int current_class = 0;
 	// определяем классы эквивалентности для первого этапа сортировки
@@ -57,13 +64,12 @@ void build_suffix_array(string& s, vector <int>& suf) {
 		}
 	
 		// сортировка по 1 половине
-		cnt.clear();
-		cnt.resize(size, 0);
+		count.assign(size, 0);
 		for (int i = 0; i < size; i++)
-			cnt[classes[sufs_by_2nd_half[i]]]++;
-		count_positions(cnt);
+			count[classes[sufs_by_2nd_half[i]]]++;
+		count_positions(count);
 		for (int i = 0; i < size; i++)
-			suf[cnt[classes[sufs_by_2nd_half[i]]]++] = sufs_by_2nd_half[i];
+			suf[count[classes[sufs_by_2nd_half[i]]]++] = sufs_by_2nd_half[i];
 			
 		// определение новых классов эквивалентности
 		vector <int> new_classes(size, 0);
@@ -81,8 +87,8 @@ void build_suffix_array(string& s, vector <int>& suf) {
 
 // Построение массива lcp алгоритмом Касаи и др., за линейное время.
 // В данной реализации lcp[i] - длина наибольшего общего префикса suf[i] и suf[i - 1]-го суффиксов.
-void build_lcp (string& s, vector <int>& suf, vector <int>& lcp) {
-	int size = static_cast <int>(s.length());
+void build_lcp (const string& s, const vector <int>& suf, vector <int>& lcp) {
+	const int size = static_cast <int>(s.length());
 	vector <int> positions(size, 0);
 	for (int i = 0; i < size; i++)
 		positions[suf[i]] = i;
@@ -107,14 +113,11 @@ void build_lcp (string& s, vector <int>& suf, vector <int>& lcp) {
 /* Определяет тип суффикса suf[suffix_position] в суффиксном массиве, 
  * т.е. то, к которой из строк данный суффикс относится. */
 int type (int suffix_position, long long s_length) {
-	return (suffix_position <= s_length ? 0 : 1);
+	return (suffix_position < s_length ? 0 : 1);
 }
 
 // Функция для решения задачи.
-void solve() {
-	string s, t;
-	long long k;
-	cin >> s >> t >> k;
+string common_substring_search(const string& s, const string& t, long long k) {
 	int s_length = static_cast <int>(s.length());
 	string concat = s + special_symbol_1 + t + special_symbol_2;
 	int size = static_cast <int>(concat.length());
@@ -132,8 +135,7 @@ void solve() {
 			current_sum += lcp[i + 1] - last_lcp;
 			if (current_sum >= k) {
 				long long addition = k - (current_sum - (lcp[i + 1] - last_lcp));
-				cout << concat.substr(suf[i], last_lcp + addition);
-				return;
+				return concat.substr(suf[i], last_lcp + addition);
 			}
 			last_lcp = lcp[i + 1];
 		}
@@ -141,8 +143,15 @@ void solve() {
 			last_lcp = min(last_lcp, lcp[i + 1]);
 		}
 	}
-	
-	cout << -1;
+	return "-1";
+}
+
+
+void solve() {
+	string s, t;
+	long long k;
+	cin >> s >> t >> k;
+	cout << common_substring_search(s, t, k);
 }
 
                                                                                                                           
