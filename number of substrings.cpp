@@ -1,40 +1,41 @@
 #include <algorithm>
 #include <iostream>
-#include <memory>
-#include <queue>
 #include <vector>
 
 using namespace std;
 
-// Специальный символ, не встречающийся в данной строке и добавляемый в её конец.
+/* Специальный символ, не встречающийся в данной строке
+ * и добавляемый в её конец для построения суффиксного массива. */
 const char special_symbol = 31;
 const int alphabet_size = 97;
 
-/* Модифицирует массив, получившийся после подсчёта, так, чтобы cnt[i] 
+/* Модифицирует массив, получившийся после подсчёта, так, чтобы count[i] 
  * хранил позицию, в которую нужно начинать ставить элементы с ключом i.
- * Изначально cnt[i] - количество элементов с ключом i. */
-void count_positions(vector <int>& cnt) {
-	int last = cnt[0];
-	cnt[0] = 0;
-	for (int i = 1; i < static_cast <int>(cnt.size()); i++) {
-		int temp = cnt[i];
-		cnt[i] = last;
+ * Изначально count[i] - количество элементов с ключом i. */
+void count_positions(vector <int>& count) {
+	if (count.empty())
+		return;
+	int last = count[0];
+	count[0] = 0;
+	for (int i = 1; i < static_cast <int>(count.size()); i++) {
+		int temp = count[i];
+		count[i] = last;
 		last += temp;
 	}
 }
 
 // Построение суффиксного массива suf (изначально заполнен нулями) по строке s.
-void build_suffix_array(string& s, vector <int>& suf) {
-	int size = static_cast <int>(s.length());
+void build_suffix_array(const string& s, vector <int>& suf) {
+	const int size = static_cast <int>(s.length());
 	// вспомогательный массив для сортировки подсчётом
-	vector <int> cnt(alphabet_size, 0);
+	vector <int> count(alphabet_size, 0);
 	// классы эквивалентности суффиксов по первым символам
 	vector <int> classes(size, 0);
 	for (int i = 0; i < size; i++)
-		cnt[s[i] - special_symbol]++;
-	count_positions(cnt);
+		count[s[i] - special_symbol]++;
+	count_positions(count);
 	for (int i = 0; i < size; i++)
-		suf[cnt[s[i] - special_symbol]++] = i;
+		suf[count[s[i] - special_symbol]++] = i;
 	char current_char = special_symbol;
 	int current_class = 0;
 	// определяем классы эквивалентности для первого этапа сортировки
@@ -56,13 +57,12 @@ void build_suffix_array(string& s, vector <int>& suf) {
 		}
 	
 		// сортировка по 1 половине
-		cnt.clear();
-		cnt.resize(size, 0);
+		count.assign(size, 0);
 		for (int i = 0; i < size; i++)
-			cnt[classes[sufs_by_2nd_half[i]]]++;
-		count_positions(cnt);
+			count[classes[sufs_by_2nd_half[i]]]++;
+		count_positions(count);
 		for (int i = 0; i < size; i++)
-			suf[cnt[classes[sufs_by_2nd_half[i]]]++] = sufs_by_2nd_half[i];
+			suf[count[classes[sufs_by_2nd_half[i]]]++] = sufs_by_2nd_half[i];
 			
 		// определение новых классов эквивалентности
 		vector <int> new_classes(size, 0);
@@ -80,8 +80,8 @@ void build_suffix_array(string& s, vector <int>& suf) {
 
 // Построение массива lcp алгоритмом Касаи и др., за линейное время.
 // В данной реализации lcp[i] - длина наибольшего общего префикса suf[i] и suf[i - 1]-го суффиксов.
-void build_lcp (string& s, vector <int>& suf, vector <int>& lcp) {
-	int size = static_cast <int>(s.length());
+void build_lcp (const string& s, const vector <int>& suf, vector <int>& lcp) {
+	const int size = static_cast <int>(s.length());
 	vector <int> positions(size, 0);
 	for (int i = 0; i < size; i++)
 		positions[suf[i]] = i;
@@ -104,21 +104,26 @@ void build_lcp (string& s, vector <int>& suf, vector <int>& lcp) {
 }
 
 // Функция для решения задачи.
-void solve() {
-	string s;
-	getline(cin, s);
-	s += special_symbol;
-	long long size = static_cast <long long>(s.length());
-	vector <int> suf(s.length(), 0), lcp(s.length(), 0);
-	build_suffix_array(s, suf);
-	build_lcp(s, suf, lcp);
+long long count_substrings(string& str) {
+	str += special_symbol;
+	long long size = static_cast <long long>(str.length());
+	vector <int> suf(str.length(), 0), lcp(str.length(), 0);
+	build_suffix_array(str, suf);
+	build_lcp(str, suf, lcp);
 	
 	long long summary_lcp = 0;
 	for (int i = 1; i < size; i++) {
 		summary_lcp += lcp[i];
 	}
 	
-	cout << (size * (size - 1)) / 2 - summary_lcp;
+	return (size * (size - 1)) / 2 - summary_lcp;
+}
+
+
+void solve() {
+	string str;
+	getline(cin, str);
+	cout << count_substrings(str);
 }
 
                                                                                                                           
