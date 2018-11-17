@@ -116,26 +116,27 @@ int type (int suffix_position, long long s_length) {
 	return (suffix_position < s_length ? 0 : 1);
 }
 
-// Функция для решения задачи.
-string common_substring_search(const string& s, const string& t, long long k) {
-	int s_length = static_cast <int>(s.length());
-	string concat = s + special_symbol_1 + t + special_symbol_2;
+/* Функция для решения задачи. Возвращает пару вида {true, подстрока}, 
+ * если подстрока с требуемым номером нашлась, и {false, ""} в противном случае. */
+pair <bool, string> common_substring_search(const string& first_string, const string& second_string, long long number) {
+	int first_length = static_cast <int>(first_string.length());
+	string concat = first_string + special_symbol_1 + second_string + special_symbol_2;
 	int size = static_cast <int>(concat.length());
 	vector <int> suf(concat.length(), 0), lcp(concat.length(), 0);
 	build_suffix_array(concat, suf);
 	build_lcp(concat, suf, lcp);
 	
-	/* Если суффиксы относятся к разным строкам, их общими префиксами будут общие подстроки s и t.
+	/* Если суффиксы относятся к разным строкам, их общими префиксами будут общие подстроки первой и второй строк.
 	 * Чтобы не учитывать их многократно, нужно всякий раз вычитать кол-во уже учтённых ранее подстрок, равное last_lcp. */
 	long long current_sum = 0;
 	int last_lcp = 0;
 	for (int i = 0; i < size - 1; i++) {
-		if (type(suf[i], s_length) != type(suf[i + 1], s_length)) {
+		if (type(suf[i], first_length) != type(suf[i + 1], first_length)) {
 			last_lcp = min(last_lcp, lcp[i + 1]);
 			current_sum += lcp[i + 1] - last_lcp;
-			if (current_sum >= k) {
-				long long addition = k - (current_sum - (lcp[i + 1] - last_lcp));
-				return concat.substr(suf[i], last_lcp + addition);
+			if (current_sum >= number) {
+				long long addition = number - (current_sum - (lcp[i + 1] - last_lcp));
+				return {true, concat.substr(suf[i], last_lcp + addition)};
 			}
 			last_lcp = lcp[i + 1];
 		}
@@ -143,15 +144,19 @@ string common_substring_search(const string& s, const string& t, long long k) {
 			last_lcp = min(last_lcp, lcp[i + 1]);
 		}
 	}
-	return "-1";
+	return {false, ""};
 }
 
 
 void solve() {
-	string s, t;
-	long long k;
-	cin >> s >> t >> k;
-	cout << common_substring_search(s, t, k);
+	string first_string, second_string;
+	long long number;
+	cin >> first_string >> second_string >> number;
+	pair <bool, string> result = common_substring_search(first_string, second_string, number);
+	if (result.first)
+		cout << result.second;
+	else
+		cout << "-1";
 }
 
                                                                                                                           
