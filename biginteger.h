@@ -10,6 +10,76 @@ class BigInteger {
 private:
 	string number;
 	bool sign;
+	
+	bool is_zero() const {
+		return number == "0";
+	}
+	
+	static void delete_leading_zeros(string& s) {
+		while (s.length() > 1 && s.back() == '0')
+			s.pop_back();
+	}
+
+	static void reverse(string& s) {
+		int size = s.length();
+		for (int i = 0; i < (size >> 1); i++)
+			swap(s[i], s[size - i - 1]);
+	}
+
+	// Получение цифры, стоящей в строке s в позиции position (именно как числа).
+	static int get(const string& s, int position) {
+		return (position < static_cast <int>(s.length()) ? s[position] - '0' : 0);
+	}
+	
+	// Сложение в столбик двух чисел, записанных в строках up и down.
+	static string add(const string& up, const string& down) {
+		string result;
+		int max_size = max(up.length(), down.length());
+		int addition = 0;
+		for (int i = 0; i < max_size; i++) {
+			result.push_back((get(up, i) + get(down, i) + addition) % base + '0');
+			addition = (get(up, i) + get(down, i) + addition) / base;
+		}
+		if (addition)
+			result.push_back('0' + addition);
+		return result;
+	}
+	
+	// Вычитание в столбик двух чисел, записанных в строках up и down.
+	static string substraction(const string& up, const string& down) {
+		string result;
+		int size = up.length();
+		int addition = 0;
+		for (int i = 0; i < size; i++) {
+			result.push_back((addition + get(up, i) - get(down, i) + base) % base + '0');
+			addition = (addition + get(up, i) - get(down, i) < 0 ? -1 : 0);
+		}
+		delete_leading_zeros(result);
+		return result;
+	}
+
+	// Умножение длинного числа, записанного в строке up, на короткое (меньше 10) multiplier.
+	static string multiplication(const string& up, int multiplier, int position) {
+		string result;
+		result.assign(position, '0');
+		int size = up.length();
+		int addition = 0;
+		for (int i = 0; i < size || addition > 0; i++) {
+			result.push_back((get(up, i) * multiplier + addition) % base + '0');
+			addition = (get(up, i) * multiplier + addition) / base;
+		}
+		return result;
+	}
+	
+	// Целочисленное деление числа, представляемого строкой up, на число, представляемое строкой down.
+	// Известно, что результат должен оказаться меньше 10.
+	static int get_next_number(const string& up, const string& down) {
+		for (int i = 1; i <= base; i++) {
+			if (up < multiplication(down, i, 0))
+				return i - 1;
+		}
+		return -1;
+	}
 
 public:
 	// конструкторы
@@ -61,18 +131,6 @@ public:
 	friend istream& operator >>(istream &stream, BigInteger& value);
 };
 
-
-void delete_leading_zeros(string& s) {
-	while (s.length() > 1 && s.back() == '0')
-		s.pop_back();
-}
-
-void reverse(string& s) {
-	int size = s.length();
-	for (int i = 0; i < (size >> 1); i++)
-		swap(s[i], s[size - i - 1]);
-}
-
 // Строки сравниваются как числа, записанные в развёрнутом виде.
 bool operator <(const string& first, const string& second) {
 	if (first.length() < second.length())
@@ -87,51 +145,6 @@ bool operator <(const string& first, const string& second) {
 			return false;
 	}
 	return false;
-}
-
-// Получение цифры, стоящей в строке s в позиции position (именно как числа).
-int get(const string& s, int position) {
-	return (position < static_cast <int>(s.length()) ? s[position] - '0' : 0);
-}
-
-// Сложение в столбик двух чисел, записанных в строках up и down.
-string add(const string& up, const string& down) {
-	string result;
-	int max_size = max(up.length(), down.length());
-	int addition = 0;
-	for (int i = 0; i < max_size; i++) {
-		result.push_back((get(up, i) + get(down, i) + addition) % base + '0');
-		addition = (get(up, i) + get(down, i) + addition) / base;
-	}
-	if (addition)
-		result.push_back('0' + addition);
-	return result;
-}
-
-// Вычитание в столбик двух чисел, записанных в строках up и down.
-string substraction(const string& up, const string& down) {
-	string result;
-	int size = up.length();
-	int addition = 0;
-	for (int i = 0; i < size; i++) {
-		result.push_back((addition + get(up, i) - get(down, i) + base) % base + '0');
-		addition = (addition + get(up, i) - get(down, i) < 0 ? -1 : 0);
-	}
-	delete_leading_zeros(result);
-	return result;
-}
-
-// Умножение длинного числа, записанного в строке up, на короткое (меньше 10) multiplier.
-string multiplication(const string& up, int multiplier, int position) {
-	string result;
-	result.assign(position, '0');
-	int size = up.length();
-	int addition = 0;
-	for (int i = 0; i < size || addition > 0; i++) {
-		result.push_back((get(up, i) * multiplier + addition) % base + '0');
-		addition = (get(up, i) * multiplier + addition) / base;
-	}
-	return result;
 }
 
 string BigInteger::toString() const {
@@ -188,16 +201,16 @@ BigInteger operator +(const BigInteger& left, const BigInteger& right) {
 	BigInteger result;
 	if (left.sign == right.sign) {
 		result.sign = left.sign;
-		result.number = add(left.number, right.number);
+		result.number = BigInteger::add(left.number, right.number);
 	}
 	else {
 		if (left.number < right.number) {
 			result.sign = right.sign;
-			result.number = substraction(right.number, left.number);
+			result.number = BigInteger::substraction(right.number, left.number);
 		}
 		else {
-			result.number = substraction(left.number, right.number);
-			result.sign = (result.number == "0" ? true : left.sign);
+			result.number = BigInteger::substraction(left.number, right.number);
+			result.sign = (result.is_zero() ? true : left.sign);
 		}
 	}
 	return result;
@@ -208,13 +221,15 @@ BigInteger& BigInteger::operator +=(const BigInteger& other) {
 }
 
 BigInteger operator *(const BigInteger& left, const BigInteger& right) {
-	if (left.number == "0" || right.number == "0")
+	if (left.is_zero() || right.is_zero())
 		return BigInteger(0);
 	BigInteger result;
 	result.sign = left.sign == right.sign;
 	int size = right.number.length();
-	for (int i = 0; i < size; i++)
-		result.number = add(result.number, multiplication(left.number, right.number[i] - '0', i));
+	for (int i = 0; i < size; i++) {
+		result.number = BigInteger::add(result.number, 
+						BigInteger::multiplication(left.number, right.number[i] - '0', i));
+	}
 	return result;
 }
 
@@ -228,14 +243,6 @@ BigInteger operator -(const BigInteger& left, const BigInteger& right) {
 
 BigInteger& BigInteger::operator -=(const BigInteger& other) {
 	return *this = *this - other;
-}
-
-int get_next_number(const string& up, const string& down) {
-	for (int i = 1; i <= base; i++) {
-		if (up < multiplication(down, i, 0))
-			return i - 1;
-	}
-	return -1;
 }
 
 BigInteger operator /(const BigInteger& left, const BigInteger& right) {
@@ -253,12 +260,12 @@ BigInteger operator /(const BigInteger& left, const BigInteger& right) {
 		else
 			current = up[up_size - position - 1] + current;
 		position++;
-		int next_number = get_next_number(current, down);
+		int next_number = BigInteger::get_next_number(current, down);
 		result.number.push_back(next_number + '0');
-		current = substraction(current, multiplication(down, next_number, 0));
+		current = BigInteger::substraction(current, BigInteger::multiplication(down, next_number, 0));
 	}
-	reverse(result.number);
-	delete_leading_zeros(result.number);
+	BigInteger::reverse(result.number);
+	BigInteger::delete_leading_zeros(result.number);
 	return result;
 }
 
@@ -329,5 +336,5 @@ BigInteger BigInteger::operator --(int) {
 }
 
 BigInteger::operator bool() const {
-	return !(number == "0");
+	return !is_zero();
 }
